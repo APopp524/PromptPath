@@ -28,12 +28,13 @@ export interface SessionLog {
 export interface WeeklyInsights {
   id?: string;
   weekStart: string;
-  bestPerformingTasks: string[];
-  weakAreas: string[];
-  learningTrends: string;
-  recommendation: string;
+  bestPerformingTasks?: string[];
+  weakAreas?: string[];
+  learningTrends?: string;
+  recommendation?: string;
   summary?: string;
   createdAt?: string;
+  updatedAt?: string;
   userId?: string;
 }
 

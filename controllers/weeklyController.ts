@@ -68,7 +68,7 @@ function computeWeeklyMetrics(logs: SessionLog[]) {
 /**
  * Fetch session logs for a specific week
  */
-async function fetchSessionLogsForWeek(weekStart: Date): Promise<SessionLog[]> {
+export async function fetchSessionLogsForWeek(weekStart: Date): Promise<SessionLog[]> {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');

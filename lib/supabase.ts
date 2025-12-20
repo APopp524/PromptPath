@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { SessionLog } from '../types';
+import { SessionLog, WeeklyInsights } from '../types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -43,6 +43,61 @@ export async function createSessionLog(
   return data as SessionLog;
 }
 
+/**
+ * Get weekly insights for a specific week
+ */
+export async function getWeeklyInsights(
+  userId: string,
+  weekStart: string
+): Promise<WeeklyInsights | null> {
+  const { data, error } = await supabase
+    .from('weekly_insights')
+    .select('*')
+    .eq('userId', userId)
+    .eq('weekStart', weekStart)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching weekly insights:', error);
+    return null;
+  }
+
+  return data as WeeklyInsights | null;
+}
+
+/**
+ * Create or update weekly insights
+ * Only updates the summary field, preserves userId and weekStart
+ */
+export async function upsertWeeklyInsights(
+  userId: string,
+  weekStart: string,
+  aiSummary: string
+): Promise<WeeklyInsights> {
+  const { data, error } = await supabase
+    .from('weekly_insights')
+    .upsert(
+      {
+        userId,
+        weekStart,
+        summary: aiSummary,
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        onConflict: 'userId,weekStart',
+      }
+    )
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error upserting weekly insights:', error);
+    throw error;
+  }
+
+  return data as WeeklyInsights;
+}
+
 export const signInWithGitHub = async () => {
   await supabase.auth.signInWithOAuth({
     provider: 'github',
@@ -52,4 +107,3 @@ export const signInWithGitHub = async () => {
 export const signOut = async () => {
   await supabase.auth.signOut();
 };
-

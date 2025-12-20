@@ -134,10 +134,25 @@ It’s not about using AI more — it’s about using it **better**.
 ---
 
 ## 🔮 Future Ideas
-- Browser extension for assisted logging
+- Browser or VS Code extension for assisted logging
 - Prompt libraries and pattern analysis
 - Team-level (opt-in) insights
 - Deeper learning trend analysis
+
+Phase 1 (Now)
+→ Web app (manual-first reflection)
+
+Phase 2
+→ VS Code / Cursor extension
+   - "Log session" shortcut
+   - Pre-filled context
+
+Phase 3
+→ Optional automation
+   - Suggestions
+   - Team-level (opt-in) insights
+   - Deeper learning trend analysis
+
 
 ---
 

@@ -291,7 +291,7 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
                     htmlFor="acceptMode"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Accept Mode <span className="text-red-500">*</span>
+                    Accepted AI suggestions <span className="text-red-500">*</span>
                   </label>
                   <select
                     id="acceptMode"
@@ -320,7 +320,7 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
                     htmlFor="timeSaved"
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Time Saved (minutes) <span className="text-red-500">*</span>
+                    Roughly how much time did AI save you? <span className="text-red-500">*</span>
                   </label>
                   <div className="mt-1">
                     <input
