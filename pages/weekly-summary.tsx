@@ -9,46 +9,72 @@ import {
   generateAndCacheAISummary,
   updateCachedAISummary,
 } from '../controllers/aiSummaryController';
+import { useAppDispatch, useAppSelector } from '../store';
+import {
+  setWeeklyInsights,
+  setWeeklyInsightsLoading,
+  setWeeklyInsightsError,
+} from '../store/weeklyInsightsSlice';
 
 const WeeklySummary: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [weeklyData, setWeeklyData] = useState<Awaited<ReturnType<typeof getWeeklySummary>> | null>(null);
+  const dispatch = useAppDispatch();
+  const { data: weeklyData, status, error } = useAppSelector((state) => state.weeklyInsights);
+  const user = useAppSelector((state) => state.user.user);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  const loading = status === 'loading';
+  const hasError = status === 'error';
+
+  // Fetch weekly data only if not already loaded and user is authenticated
   useEffect(() => {
     const fetchWeeklyData = async () => {
-      try {
-        setLoading(true);
-        const data = await getWeeklySummary();
-        setWeeklyData(data);
-
-        // Try to load cached AI summary
+      // Only fetch if status is idle and user is authenticated
+      if (status === 'idle' && user) {
+        dispatch(setWeeklyInsightsLoading());
         try {
-          const cached = await getCachedAISummary(data.weekStart);
+          const data = await getWeeklySummary();
+          dispatch(setWeeklyInsights(data));
+
+          // Try to load cached AI summary
+          try {
+            const cached = await getCachedAISummary(data.weekStart);
+            setAiSummary(cached);
+          } catch (err) {
+            // Silently fail - AI summary is optional
+            console.warn('Could not load cached AI summary:', err);
+          }
+        } catch (err) {
+          console.error('Error fetching weekly summary:', err);
+          const errorMessage =
+            err instanceof Error && err.message === 'User not authenticated'
+              ? 'Please sign in to view your weekly summary'
+              : 'Failed to load weekly summary';
+          dispatch(setWeeklyInsightsError(errorMessage));
+        }
+      }
+    };
+
+    fetchWeeklyData();
+  }, [status, user, dispatch]);
+
+  // Load AI summary when weekly data becomes available
+  useEffect(() => {
+    const loadAISummary = async () => {
+      if (weeklyData && !aiSummary) {
+        try {
+          const cached = await getCachedAISummary(weeklyData.weekStart);
           setAiSummary(cached);
         } catch (err) {
           // Silently fail - AI summary is optional
           console.warn('Could not load cached AI summary:', err);
         }
-
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching weekly summary:', err);
-        const errorMessage =
-          err instanceof Error && err.message === 'User not authenticated'
-            ? 'Please sign in to view your weekly summary'
-            : 'Failed to load weekly summary';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchWeeklyData();
-  }, []);
+    loadAISummary();
+  }, [weeklyData, aiSummary]);
 
   const handleGenerateAI = async () => {
     if (!weeklyData) return;
@@ -98,7 +124,7 @@ const WeeklySummary: React.FC = () => {
         )}
 
         {/* Error State */}
-        {error && !loading && (
+        {hasError && !loading && error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-800">{error}</p>
           </div>

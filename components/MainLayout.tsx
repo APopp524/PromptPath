@@ -1,13 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import {
-  getCurrentUser,
-  subscribeToAuthChanges,
-  handleSignInWithGitHub,
-  handleSignOut,
-} from '../controllers/authController';
-import type { User } from '@supabase/supabase-js';
+import { handleSignInWithGitHub, handleSignOut } from '../controllers/authController';
+import { useAppSelector } from '../store';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -15,21 +10,12 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  // Read user from Redux instead of fetching directly
+  const user = useAppSelector((state) => state.user.user);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => router.pathname === path;
-
-  useEffect(() => {
-    // Get initial user
-    getCurrentUser().then(setUser);
-
-    // Listen for auth changes
-    const unsubscribe = subscribeToAuthChanges(setUser);
-
-    return unsubscribe;
-  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {

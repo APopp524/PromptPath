@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Dialog from './ui/Dialog';
 import { SessionLog, Tool, TaskType, Outcome, AcceptMode } from '../types';
+import { useAppSelector, useAppDispatch } from '../store';
+import { setLastUsedValues } from '../store/preferencesSlice';
 
 interface SessionLogModalProps {
   isOpen: boolean;
@@ -20,39 +22,24 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
   onSubmit,
   lastUsedTool = 'Cursor',
 }) => {
-  // Load last-used values from localStorage
-  const loadLastUsedValues = (): Partial<Omit<SessionLog, 'id' | 'createdAt' | 'userId'>> => {
-    if (typeof window === 'undefined') return {};
-    
-    try {
-      const stored = localStorage.getItem('promptpath_last_session_values');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return {
-          tool: parsed.tool || lastUsedTool,
-          taskType: parsed.taskType || 'Debugging',
-          timeSaved: parsed.timeSaved || 15,
-        };
-      }
-    } catch (e) {
-      // Ignore localStorage errors
-    }
-    
+  const dispatch = useAppDispatch();
+  const preferences = useAppSelector((state) => state.preferences);
+  
+  // Get last used values from Redux, with fallbacks
+  const getLastUsedValues = () => {
     return {
-      tool: lastUsedTool,
-      taskType: 'Debugging',
-      timeSaved: 15,
+      tool: (preferences.lastUsedTool as Tool) || lastUsedTool,
+      taskType: (preferences.lastUsedTaskType as TaskType) || 'Debugging',
+      timeSaved: preferences.lastUsedTimeSaved || 15,
     };
   };
-
-  const lastUsedValues = loadLastUsedValues();
   
   const [formData, setFormData] = useState<Omit<SessionLog, 'id' | 'createdAt' | 'userId'>>({
-    tool: lastUsedValues.tool as Tool || lastUsedTool,
-    taskType: lastUsedValues.taskType as TaskType || 'Debugging',
+    tool: getLastUsedValues().tool,
+    taskType: getLastUsedValues().taskType,
     outcome: 'Worked',
     acceptMode: 'As-is',
-    timeSaved: lastUsedValues.timeSaved || 15,
+    timeSaved: getLastUsedValues().timeSaved,
     prompt: '',
     learned: '',
   });
@@ -64,13 +51,17 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      const lastUsed = loadLastUsedValues();
+      const lastUsed = {
+        tool: (preferences.lastUsedTool as Tool) || lastUsedTool,
+        taskType: (preferences.lastUsedTaskType as TaskType) || 'Debugging',
+        timeSaved: preferences.lastUsedTimeSaved || 15,
+      };
       setFormData({
-        tool: (lastUsed.tool as Tool) || lastUsedTool,
-        taskType: (lastUsed.taskType as TaskType) || 'Debugging',
+        tool: lastUsed.tool,
+        taskType: lastUsed.taskType,
         outcome: 'Worked',
         acceptMode: 'As-is',
-        timeSaved: lastUsed.timeSaved || 15,
+        timeSaved: lastUsed.timeSaved,
         prompt: '',
         learned: '',
       });
@@ -80,7 +71,7 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
         firstInputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen, lastUsedTool]);
+  }, [isOpen, lastUsedTool, preferences.lastUsedTool, preferences.lastUsedTaskType, preferences.lastUsedTimeSaved]);
 
 
   const handleChange = (
@@ -131,18 +122,14 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
       return;
     }
 
-    // Save last-used values to localStorage
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('promptpath_last_session_values', JSON.stringify({
-          tool: formData.tool,
-          taskType: formData.taskType,
-          timeSaved: formData.timeSaved,
-        }));
-      }
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+    // Save last-used values to Redux (which will persist to localStorage automatically)
+    dispatch(
+      setLastUsedValues({
+        tool: formData.tool,
+        taskType: formData.taskType,
+        timeSaved: formData.timeSaved,
+      })
+    );
 
     setIsSubmitting(true);
     try {

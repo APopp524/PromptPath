@@ -4,45 +4,56 @@ import SessionLogModal from '../components/SessionLogModal';
 import { useToast } from '../components/ui/Toast';
 import Tooltip from '../components/ui/Tooltip';
 import { fetchUserSessionLogs, createUserSessionLog } from '../controllers/sessionLogController';
+import { useAppDispatch, useAppSelector } from '../store';
+import {
+  setSessionLogs,
+  setSessionLogsLoading,
+  setSessionLogsError,
+  addSessionLog,
+} from '../store/dashboardSlice';
 import { computeMetrics } from '../utils/metrics';
 import { getLastUsedTool } from '../utils/sessionHelpers';
 import { SessionLog } from '../types';
 
 const Dashboard: React.FC = () => {
-  const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const { sessionLogs, status, error } = useAppSelector((state) => state.dashboard);
+  const user = useAppSelector((state) => state.user.user);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { showToast } = useToast();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const logs = await fetchUserSessionLogs();
-      setSessionLogs(logs);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching session logs:', err);
-      const errorMessage =
-        err instanceof Error && err.message === 'User not authenticated'
-          ? 'Please sign in to view your session logs'
-          : 'Failed to load session logs';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = status === 'loading';
+  const hasError = status === 'error';
 
+  // Fetch session logs only if not already loaded and user is authenticated
   useEffect(() => {
+    const fetchData = async () => {
+      // Only fetch if status is idle and user is authenticated
+      if (status === 'idle' && user) {
+        dispatch(setSessionLogsLoading());
+        try {
+          const logs = await fetchUserSessionLogs();
+          dispatch(setSessionLogs(logs));
+        } catch (err) {
+          console.error('Error fetching session logs:', err);
+          const errorMessage =
+            err instanceof Error && err.message === 'User not authenticated'
+              ? 'Please sign in to view your session logs'
+              : 'Failed to load session logs';
+          dispatch(setSessionLogsError(errorMessage));
+        }
+      }
+    };
+
     fetchData();
-  }, []);
+  }, [status, user, dispatch]);
 
   const handleSubmitSessionLog = async (
     sessionLog: Omit<SessionLog, 'id' | 'createdAt' | 'userId'>
   ) => {
-    await createUserSessionLog(sessionLog);
-    // Refresh the data after successful submission
-    await fetchData();
+    const newLog = await createUserSessionLog(sessionLog);
+    // Add the new log to Redux cache
+    dispatch(addSessionLog(newLog));
     // Show success toast
     showToast('Session logged — weekly insights updated.');
   };
@@ -69,7 +80,7 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* Error State */}
-        {error && !loading && (
+        {hasError && !loading && error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-800">{error}</p>
           </div>

@@ -1,5 +1,8 @@
 import { supabase, signInWithGitHub, signOut } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import store from '../store';
+import { clearPreferences } from '../store/preferencesSlice';
+import { clearPersistedState } from '../store/persist';
 
 /**
  * Auth controller - orchestrates authentication logic
@@ -46,6 +49,12 @@ export async function handleSignInWithGitHub(): Promise<void> {
  * Sign out
  */
 export async function handleSignOut(): Promise<void> {
+  // Clear Redux preferences state
+  store.dispatch(clearPreferences());
+  
+  // Clear persisted state from localStorage
+  clearPersistedState();
+  
   await signOut();
 }
 
