@@ -36,7 +36,7 @@ const persistedState = loadPersistedState();
  * Note: Only the preferences slice is persisted. User state is not persisted
  * as it should be fetched from Supabase on each session.
  */
-const persistMiddleware: Middleware = (store) => (next) => (action) => {
+const persistMiddleware: Middleware = (store) => (next) => (action: any) => {
   // Execute the action first
   const result = next(action);
   
@@ -76,12 +76,12 @@ const store = configureStore({
     weeklyInsights: weeklyInsightsReducer,
   },
   // Preload persisted preferences on store initialization
-  preloadedState: persistedState
+  preloadedState: persistedState?.preferences
     ? {
         preferences: {
-          lastUsedTool: persistedState.preferences.lastUsedTool as Tool | null,
-          lastUsedTaskType: persistedState.preferences.lastUsedTaskType as TaskType | null,
-          lastUsedTimeSaved: persistedState.preferences.lastUsedTimeSaved,
+          lastUsedTool: (persistedState.preferences?.lastUsedTool ?? null) as Tool | null,
+          lastUsedTaskType: (persistedState.preferences?.lastUsedTaskType ?? null) as TaskType | null,
+          lastUsedTimeSaved: persistedState.preferences?.lastUsedTimeSaved ?? null,
         },
       }
     : undefined,
