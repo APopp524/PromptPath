@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Dialog from './ui/Dialog';
 import { SessionLog, Tool, TaskType, Outcome, AcceptMode } from '../types';
 
 interface SessionLogModalProps {
@@ -19,30 +20,57 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
   onSubmit,
   lastUsedTool = 'Cursor',
 }) => {
+  // Load last-used values from localStorage
+  const loadLastUsedValues = (): Partial<Omit<SessionLog, 'id' | 'createdAt' | 'userId'>> => {
+    if (typeof window === 'undefined') return {};
+    
+    try {
+      const stored = localStorage.getItem('promptpath_last_session_values');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          tool: parsed.tool || lastUsedTool,
+          taskType: parsed.taskType || 'Debugging',
+          timeSaved: parsed.timeSaved || 15,
+        };
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+    
+    return {
+      tool: lastUsedTool,
+      taskType: 'Debugging',
+      timeSaved: 15,
+    };
+  };
+
+  const lastUsedValues = loadLastUsedValues();
+  
   const [formData, setFormData] = useState<Omit<SessionLog, 'id' | 'createdAt' | 'userId'>>({
-    tool: lastUsedTool,
-    taskType: 'Debugging',
+    tool: lastUsedValues.tool as Tool || lastUsedTool,
+    taskType: lastUsedValues.taskType as TaskType || 'Debugging',
     outcome: 'Worked',
     acceptMode: 'As-is',
-    timeSaved: 15,
+    timeSaved: lastUsedValues.timeSaved || 15,
     prompt: '',
     learned: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLSelectElement>(null);
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
+      const lastUsed = loadLastUsedValues();
       setFormData({
-        tool: lastUsedTool,
-        taskType: 'Debugging',
+        tool: (lastUsed.tool as Tool) || lastUsedTool,
+        taskType: (lastUsed.taskType as TaskType) || 'Debugging',
         outcome: 'Worked',
         acceptMode: 'As-is',
-        timeSaved: 15,
+        timeSaved: lastUsed.timeSaved || 15,
         prompt: '',
         learned: '',
       });
@@ -54,32 +82,6 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
     }
   }, [isOpen, lastUsedTool]);
 
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
-
-  // Handle click outside modal
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>
@@ -129,6 +131,19 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
       return;
     }
 
+    // Save last-used values to localStorage
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('promptpath_last_session_values', JSON.stringify({
+          tool: formData.tool,
+          taskType: formData.taskType,
+          timeSaved: formData.timeSaved,
+        }));
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
@@ -141,62 +156,16 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 overflow-y-auto"
-      aria-labelledby="modal-title"
-      role="dialog"
-      aria-modal="true"
-      onClick={handleBackdropClick}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title="Log AI Coding Session"
     >
-      <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-          aria-hidden="true"
-        />
-
-        {/* Modal panel */}
-        <div
-          ref={modalRef}
-          className="relative inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:align-middle"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <form onSubmit={handleSubmit}>
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3
-                  className="text-lg font-medium leading-6 text-gray-900"
-                  id="modal-title"
-                >
-                  Log AI Coding Session
-                </h3>
-                <button
-                  type="button"
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                  onClick={onClose}
-                  tabIndex={0}
-                >
-                  <span className="sr-only">Close</span>
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-4">
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                 {/* Tool Selection */}
                 <div>
                   <label
@@ -397,37 +366,31 @@ const SessionLogModal: React.FC<SessionLogModalProps> = ({
                   />
                 </div>
 
-                {/* Submit Error */}
-                {errors.submit && (
-                  <div className="rounded-md bg-red-50 p-4">
-                    <p className="text-sm text-red-800">{errors.submit}</p>
-                  </div>
-                )}
-              </div>
+          {/* Submit Error */}
+          {errors.submit && (
+            <div className="rounded-md bg-red-50 p-4">
+              <p className="text-sm text-red-800">{errors.submit}</p>
             </div>
-
-            {/* Footer Actions */}
-            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Session'}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                tabIndex={0}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          )}
         </div>
-      </div>
-    </div>
+        <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto sm:text-sm"
+          >
+            {isSubmitting ? 'Saving...' : 'Save Session'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 };
 

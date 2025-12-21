@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '../components/MainLayout';
 import SessionLogModal from '../components/SessionLogModal';
+import { useToast } from '../components/ui/Toast';
+import Tooltip from '../components/ui/Tooltip';
 import { fetchUserSessionLogs, createUserSessionLog } from '../controllers/sessionLogController';
 import { computeMetrics } from '../utils/metrics';
 import { getLastUsedTool } from '../utils/sessionHelpers';
@@ -11,6 +13,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { showToast } = useToast();
 
   const fetchData = async () => {
     try {
@@ -40,6 +43,8 @@ const Dashboard: React.FC = () => {
     await createUserSessionLog(sessionLog);
     // Refresh the data after successful submission
     await fetchData();
+    // Show success toast
+    showToast('Session logged — weekly insights updated.');
   };
 
   const metrics = computeMetrics(sessionLogs);
@@ -72,12 +77,19 @@ const Dashboard: React.FC = () => {
 
         {/* Empty State */}
         {!loading && !error && !hasData && (
-          <div className="bg-white shadow rounded-lg p-6">
+          <div className="bg-white shadow rounded-lg p-8">
             <div className="text-center">
-              <p className="text-gray-500 mb-2">No session logs yet.</p>
-              <p className="text-sm text-gray-400">
-                Start logging your AI coding sessions to see insights here.
+              <p className="text-lg text-gray-700 mb-2">Ready to start reflecting?</p>
+              <p className="text-sm text-gray-500 mb-4">
+                Log your first AI coding session to begin tracking insights and building better habits.
               </p>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Log Your First Session
+              </button>
             </div>
           </div>
         )}
@@ -95,7 +107,28 @@ const Dashboard: React.FC = () => {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Avg Time Saved
+                        <Tooltip
+                          content="An estimate of how much time AI saved you compared to completing the task manually. This is self-reported and meant to encourage reflection, not precision."
+                          side="top"
+                        >
+                          <span className="inline-flex items-center cursor-help">
+                            Avg Time Saved
+                            <svg
+                              className="ml-1 h-3 w-3 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              aria-hidden="true"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </span>
+                        </Tooltip>
                       </dt>
                       <dd className="text-2xl font-semibold text-gray-900">
                         {hasData ? `${metrics.avgTimeSaved} min` : '-- min'}
@@ -116,7 +149,28 @@ const Dashboard: React.FC = () => {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Sessions This Week
+                        <Tooltip
+                          content="The number of times you logged an AI-assisted coding session this week. Each session represents a moment of intentional use."
+                          side="top"
+                        >
+                          <span className="inline-flex items-center cursor-help">
+                            Sessions This Week
+                            <svg
+                              className="ml-1 h-3 w-3 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              aria-hidden="true"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </span>
+                        </Tooltip>
                       </dt>
                       <dd className="text-2xl font-semibold text-gray-900">
                         {hasData ? metrics.sessionsThisWeek : '--'}
@@ -137,7 +191,28 @@ const Dashboard: React.FC = () => {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Learning Density
+                        <Tooltip
+                          content="A reflection of how much you felt you learned during AI-assisted work. Higher values suggest deeper understanding, not just faster output."
+                          side="top"
+                        >
+                          <span className="inline-flex items-center cursor-help">
+                            Learning Density
+                            <svg
+                              className="ml-1 h-3 w-3 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              aria-hidden="true"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </span>
+                        </Tooltip>
                       </dt>
                       <dd className="text-2xl font-semibold text-gray-900">
                         {hasData ? `${metrics.learningDensity}%` : '--%'}
@@ -158,7 +233,28 @@ const Dashboard: React.FC = () => {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Accept vs Modify
+                        <Tooltip
+                          content="A comparison of how often you accepted AI output as-is versus modifying it. This can hint at whether AI is acting more as an assistant or a starting point."
+                          side="top"
+                        >
+                          <span className="inline-flex items-center cursor-help">
+                            Accept vs Modify
+                            <svg
+                              className="ml-1 h-3 w-3 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              aria-hidden="true"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </span>
+                        </Tooltip>
                       </dt>
                       <dd className="text-2xl font-semibold text-gray-900">
                         {hasData ? `${metrics.acceptVsModifyRatio}%` : '--%'}
@@ -214,6 +310,7 @@ const Dashboard: React.FC = () => {
         onSubmit={handleSubmitSessionLog}
         lastUsedTool={getLastUsedTool(sessionLogs)}
       />
+
     </MainLayout>
   );
 };

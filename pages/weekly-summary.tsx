@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '../components/MainLayout';
 import WeeklyMetrics from '../components/WeeklyMetrics';
 import WeeklySummaryText from '../components/WeeklySummaryText';
+import Pill from '../components/ui/Pill';
 import { getWeeklySummary, fetchSessionLogsForWeek } from '../controllers/weeklyController';
 import {
   getCachedAISummary,
@@ -78,7 +79,12 @@ const WeeklySummary: React.FC = () => {
       <div className="space-y-6">
         {/* Page Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Weekly Summary</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">Weekly Summary</h1>
+            {!loading && weeklyData && aiSummary && (
+              <Pill variant="green">Reflection complete</Pill>
+            )}
+          </div>
           <p className="mt-2 text-sm text-gray-600">
             Insights from your coding sessions this week
           </p>
@@ -100,11 +106,11 @@ const WeeklySummary: React.FC = () => {
 
         {/* Empty State */}
         {!loading && !error && weeklyData && weeklyData.metrics.sessionsThisWeek === 0 && (
-          <div className="bg-white shadow rounded-lg p-6">
+          <div className="bg-white shadow rounded-lg p-8">
             <div className="text-center">
-              <p className="text-gray-500 mb-2">No sessions logged this week.</p>
-              <p className="text-sm text-gray-400">
-                Start logging your AI coding sessions to see insights here.
+              <p className="text-lg text-gray-700 mb-2">No sessions this week yet.</p>
+              <p className="text-sm text-gray-500">
+                Once you log sessions, your weekly reflection will appear here automatically.
               </p>
             </div>
           </div>
