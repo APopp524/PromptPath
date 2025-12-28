@@ -50,8 +50,10 @@ export async function generateAndCacheAISummary(
     sessionSummaries,
   });
 
-  // Cache the summary
-  const weekStartString = weeklyData.weekStart.toISOString().split('T')[0];
+  // Cache the summary - weekStart is already an ISO string
+  const weekStartString = typeof weeklyData.weekStart === 'string' 
+    ? weeklyData.weekStart 
+    : weeklyData.weekStart.toISOString().split('T')[0];
   await upsertWeeklyInsights(user.id, weekStartString, aiSummary);
 
   return aiSummary;

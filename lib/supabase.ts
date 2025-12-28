@@ -81,6 +81,26 @@ export async function getWeeklyInsights(
 }
 
 /**
+ * Get all weekly insights for a user, ordered by weekStart DESC
+ */
+export async function getAllWeeklyInsights(
+  userId: string
+): Promise<WeeklyInsights[]> {
+  const { data, error } = await supabase
+    .from('weekly_insights')
+    .select('*')
+    .eq('userId', userId)
+    .order('weekStart', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching all weekly insights:', error);
+    return [];
+  }
+
+  return (data || []) as WeeklyInsights[];
+}
+
+/**
  * Create or update weekly insights
  * Only updates the summary field, preserves userId and weekStart
  */

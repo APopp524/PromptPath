@@ -5,6 +5,8 @@ interface WeeklySummaryTextProps {
   summaryText: string;
   aiSummary?: string | null;
   isEditable?: boolean;
+  isReadOnly?: boolean;
+  label?: string;
   onSave?: (text: string) => Promise<void>;
 }
 
@@ -13,6 +15,8 @@ const WeeklySummaryText: React.FC<WeeklySummaryTextProps> = ({
   summaryText,
   aiSummary,
   isEditable = false,
+  isReadOnly = false,
+  label,
   onSave,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -21,6 +25,7 @@ const WeeklySummaryText: React.FC<WeeklySummaryTextProps> = ({
 
   const displayText = aiSummary || summaryText;
   const isAISummary = !!aiSummary;
+  const canEdit = isEditable && !isReadOnly && isAISummary;
 
   const handleEdit = () => {
     setEditedText(displayText);
@@ -52,12 +57,18 @@ const WeeklySummaryText: React.FC<WeeklySummaryTextProps> = ({
       <div className="px-4 py-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-500">
+            {label && (
+              <span className="font-medium text-gray-700 mr-2">{label}</span>
+            )}
             Week of: <span className="font-medium text-gray-700">{weekStartFormatted}</span>
             {isAISummary && (
               <span className="ml-2 text-xs text-blue-600">AI-generated</span>
             )}
+            {isReadOnly && (
+              <span className="ml-2 text-xs text-gray-500">Read-only</span>
+            )}
           </div>
-          {isEditable && isAISummary && !isEditing && (
+          {canEdit && !isEditing && (
             <button
               onClick={handleEdit}
               className="text-sm text-gray-500 hover:text-gray-700 transition-colors"

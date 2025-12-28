@@ -1,19 +1,24 @@
-import { getSessionLogs } from '../lib/supabase';
-import { SessionLog } from '../types';
+import { getSessionLogs, getAllWeeklyInsights } from '../lib/supabase';
+import { SessionLog, WeeklyInsights } from '../types';
 import { getCurrentUser } from './authController';
 import {
   getMostCommonTaskType,
   getMostCommonAcceptMode,
   getAcceptModeDescription,
 } from '../utils/weeklyHelpers';
-import { getWeekStartForDate, isInWeek, formatWeekStart } from '../utils/dateHelpers';
+import {
+  getWeekStartForDate,
+  isInWeek,
+  formatWeekStart,
+  getCurrentWeekStartISO,
+} from '../utils/dateHelpers';
 
 /**
  * Weekly summary controller - orchestrates weekly summary operations
  */
 
 export interface WeeklySummary {
-  weekStart: Date;
+  weekStart: string; // ISO string (YYYY-MM-DD) - Redux serializable
   weekStartFormatted: string;
   metrics: {
     avgTimeSaved: number;
@@ -125,14 +130,89 @@ export async function getWeeklySummary(
     metrics.learningDensity
   );
 
+  // Store weekStart as ISO string for Redux serialization
+  const weekStartISO = targetWeekStart.toISOString().split('T')[0];
+  
   return {
-    weekStart: targetWeekStart,
+    weekStart: weekStartISO, // ISO string, not Date object
     weekStartFormatted: formatWeekStart(targetWeekStart),
     metrics,
     mostCommonTaskType,
     mostCommonAcceptMode,
     acceptModeDescription,
     summaryText,
+  };
+}
+
+/**
+ * Get all weekly insights for the user
+ * - Fetches all weekly_insights from database
+ * - Computes current week summary from session logs
+ * - Splits into current week and past weeks
+ */
+export async function getAllWeeklyData(): Promise<{
+  currentWeek: WeeklySummary | null;
+  pastWeeks: WeeklyInsights[];
+}> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Fetch all weekly_insights from database in a single query
+  const allInsights = await getAllWeeklyInsights(user.id);
+
+  // Get current week start as ISO string
+  const currentWeekStartISO = getCurrentWeekStartISO();
+
+  // Split insights into current week and past weeks
+  const currentWeekInsight = allInsights.find(
+    (insight) => insight.weekStart === currentWeekStartISO
+  );
+  const pastWeeks = allInsights.filter(
+    (insight) => insight.weekStart !== currentWeekStartISO
+  );
+
+  // Compute current week summary from session logs
+  const currentWeekStart = getWeekStartForDate(new Date());
+  const logs = await fetchSessionLogsForWeek(currentWeekStart);
+
+  const metrics = computeWeeklyMetrics(logs);
+  const mostCommonTaskType = getMostCommonTaskType(logs);
+  const mostCommonAcceptMode = getMostCommonAcceptMode(logs);
+  const acceptModeDescription = mostCommonAcceptMode
+    ? getAcceptModeDescription(mostCommonAcceptMode)
+    : 'used AI suggestions';
+
+  const summaryText = generateSummaryText(
+    logs,
+    mostCommonTaskType,
+    acceptModeDescription,
+    metrics.learningDensity
+  );
+
+  // Store weekStart as ISO string for Redux serialization
+  const weekStartISO = currentWeekStart.toISOString().split('T')[0];
+  
+  const currentWeek: WeeklySummary = {
+    weekStart: weekStartISO, // ISO string, not Date object
+    weekStartFormatted: formatWeekStart(currentWeekStart),
+    metrics,
+    mostCommonTaskType,
+    mostCommonAcceptMode,
+    acceptModeDescription,
+    summaryText,
+  };
+
+  // If there's a saved summary for current week, use it
+  if (currentWeekInsight?.summary) {
+    // The summary will be loaded separately via getCachedAISummary
+    // We keep the computed summaryText as fallback
+  }
+
+  return {
+    currentWeek,
+    pastWeeks,
   };
 }
 

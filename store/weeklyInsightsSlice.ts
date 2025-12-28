@@ -13,18 +13,23 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { WeeklyInsights } from '../types';
 import type { WeeklySummary } from '../controllers/weeklyController';
 
 type WeeklyInsightsStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 interface WeeklyInsightsState {
-  data: WeeklySummary | null;
+  // Current week's computed summary (from session logs)
+  currentWeek: WeeklySummary | null;
+  // All past weeks' insights (from database)
+  pastWeeks: WeeklyInsights[];
   status: WeeklyInsightsStatus;
   error: string | null;
 }
 
 const initialState: WeeklyInsightsState = {
-  data: null,
+  currentWeek: null,
+  pastWeeks: [],
   status: 'idle',
   error: null,
 };
@@ -42,9 +47,17 @@ const weeklyInsightsSlice = createSlice({
     },
     /**
      * Set weekly insights data (on successful fetch)
+     * Stores current week summary and all past weeks
      */
-    setWeeklyInsights: (state, action: PayloadAction<WeeklySummary>) => {
-      state.data = action.payload;
+    setWeeklyInsights: (
+      state,
+      action: PayloadAction<{
+        currentWeek: WeeklySummary | null;
+        pastWeeks: WeeklyInsights[];
+      }>
+    ) => {
+      state.currentWeek = action.payload.currentWeek;
+      state.pastWeeks = action.payload.pastWeeks;
       state.status = 'loaded';
       state.error = null;
     },
@@ -54,13 +67,15 @@ const weeklyInsightsSlice = createSlice({
     setWeeklyInsightsError: (state, action: PayloadAction<string>) => {
       state.status = 'error';
       state.error = action.payload;
-      state.data = null;
+      state.currentWeek = null;
+      state.pastWeeks = [];
     },
     /**
      * Clear weekly insights (e.g., on logout)
      */
     clearWeeklyInsights: (state) => {
-      state.data = null;
+      state.currentWeek = null;
+      state.pastWeeks = [];
       state.status = 'idle';
       state.error = null;
     },

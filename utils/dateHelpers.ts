@@ -52,11 +52,29 @@ export function isInWeek(dateString: string, weekStart: Date): boolean {
 
 /**
  * Format date as "Month Day, Year"
+ * Accepts either Date object or ISO string
  */
-export function formatWeekStart(weekStart: Date): string {
-  return weekStart.toLocaleDateString('en-US', {
+export function formatWeekStart(weekStart: Date | string): string {
+  const date = typeof weekStart === 'string' ? new Date(weekStart) : weekStart;
+  return date.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+/**
+ * Get current week start as ISO string (YYYY-MM-DD)
+ */
+export function getCurrentWeekStartISO(): string {
+  const weekStart = getWeekStartForDate(new Date());
+  return weekStart.toISOString().split('T')[0];
+}
+
+/**
+ * Format week label from ISO string
+ * Convenience function for formatting weekStart ISO strings
+ */
+export function formatWeekLabel(weekStartIso: string): string {
+  return formatWeekStart(weekStartIso);
 }
